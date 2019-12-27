@@ -74,53 +74,54 @@ def edgesFromSource(source, edges, keysCollected):
     return out
 
 
+def get_tuple(idx, array, newval):
+    return tuple([newval if i == idx else array[i] for i in range(len(array))])
+
 def collectkeys(shortestPaths, start, allKeys):
     q = []
-    keysCollected = ['@']
-    heappush(q, (0, '@', keysCollected))
-    pathsExplored = {('@'):0}
+    keysCollected = ['@1','@2','@3','@4']
+    heappush(q, (0, ('@1','@2','@3','@4'), keysCollected))
+    pathsExplored = {('@1','@2','@3','@4'):0}
 
     while len(q) > 0:
-        moveCount, pos, keysCollected = heappop(q)
+        moveCount, robots, keysCollected = heappop(q)
 
         #print(f"Num keys collected {sorted(keysCollected)} {len(keysCollected)} {sorted(allKeys)} {len(allKeys)}")
 
         if list(sorted(keysCollected)) == allKeys:
             print(f"Path: {keysCollected}")
             return moveCount
-        debug = False
-        if len(keysCollected) == 16:
-            debug = True
+        debug = True
 
         if debug:
-            print(f"Visiting node {pos} {keysCollected}")
+            print(f"Visiting node {robots} {keysCollected} {allKeys}")
 
         #print(f"Visiting node {pos} in {moveCount} moves collected {sorted(keysCollected)} all {allKeys}")
 
-
-        edges = edgesFromSource(pos, shortestPaths, keysCollected)
-        for e in edges:
-            if debug:
-                print(f"At {pos} checking edge to {e.dest} with weight {e.weight}")
-            if e.dest not in keysCollected:
-                # have I seen this path before
-                newKeysCollected = tuple(list(keysCollected) + [e.dest])
-                #if len(keysCollected) == 17:
-                    #print(f"****************** Checking full collection **************************")
-                pathToAdd = tuple(sorted(list(keysCollected)) + [e.dest])
-                shouldAdd = True
-                if pathToAdd in pathsExplored:
-                    if pathsExplored[pathToAdd] <= moveCount + e.weight:
-                        shouldAdd = False
-                if shouldAdd:
-                    heappush(q, (moveCount + e.weight, e.dest, newKeysCollected))
-                    if debug:
-                        print(f"Adding path: {newKeysCollected} with val {e.weight+moveCount}")
-                    if len(keysCollected) == 17:
-                        print(f"****************** Adding full collection **************************")
-                        print(f"move count {moveCount} edge weight {e.weight} from {e.source} to {e.dest}")
-                    pathsExplored[pathToAdd] = e.weight + moveCount
-
+        for robotidx,pos in enumerate(robots):
+            edges = edgesFromSource(pos, shortestPaths, keysCollected)
+            for e in edges:
+                if debug:
+                    print(f"At {pos} checking edge to {e.dest} with weight {e.weight}")
+                if e.dest not in keysCollected:
+                    # have I seen this path before
+                    newKeysCollected = tuple(list(keysCollected) + [e.dest])
+                    #if len(keysCollected) == 17:
+                        #print(f"****************** Checking full collection **************************")
+                    pathToAdd = tuple(sorted(list(keysCollected)) + [get_tuple(robotidx, robots, e.dest)])
+                    shouldAdd = True
+                    if pathToAdd in pathsExplored:
+                        if pathsExplored[pathToAdd] <= moveCount + e.weight:
+                            shouldAdd = False
+                    if shouldAdd:
+                        heappush(q, (moveCount + e.weight, get_tuple(robotidx, robots, e.dest), newKeysCollected))
+                        if debug:
+                            print(f"Adding path: {newKeysCollected} with val {e.weight+moveCount}")
+                        if len(keysCollected) == 17:
+                            print(f"****************** Adding full collection **************************")
+                            print(f"move count {moveCount} edge weight {e.weight} from {e.source} to {e.dest}")
+                        pathsExplored[pathToAdd] = e.weight + moveCount
+    
 def read_map(inf):
     ypos = 0
     m = {}
@@ -133,9 +134,10 @@ def read_map(inf):
             print(f"line: {line}")
         for xpos,c in enumerate(line.rstrip('\n')):
             if c == '@':
-                nodes.append(Node(xpos, ypos, '@'))
                 starts.append((ypos,xpos))
-                keys.append('@')
+                startlabel = '@' + str(len(starts))
+                keys.append(startlabel)
+                nodes.append(Node(xpos, ypos, startlabel))
             elif str.islower(c):
                 nodes.append(Node(xpos, ypos, c))
                 keys.append(c)
@@ -152,18 +154,15 @@ def read_map(inf):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("infile", type=str, help="input map file name")
-    parser.add_argument("--numrobots", type=int, help="number of independent robots", default=1)
     args = parser.parse_args()
 
-    if args.numrobots == 1:
-        starts, edges, doors, keys =  read_map(args.infile)
+    starts, edges, doors, keys =  read_map(args.infile)
     
-        keys = sorted(keys)
+    keys = sorted(keys)
 
-        movesToSolve = collectkeys(edges, start, keys)
-    else:
-        pass
+    movesToSolve = collectkeys(edges, starts, keys)
 
+    print(f"Solved in {movesToSolve}")
 
 if __name__ == "__main__":
     main()
